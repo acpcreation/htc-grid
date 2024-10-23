@@ -56,11 +56,12 @@ jobs:
               # sed -i "s,.,,g" requirements.txt
               # cat requirements.txt
               # echo ""
-              for rem in ${removeDeps[@]}; do
-                  sed -i '/$rem/d' requirements.txt
+              # for rem in ${removeDeps[@]}; do
+              #     sed -i '/$rem/d' requirements.txt
                   # sed -i "s,$rem,,g" requirements.txt
                   # sed -i '' "s/$rem/ooo/g" requirements.txt
-              done
+              # done
+              sed -i '/dist/d' requirements.txt
               cat requirements.txt
               mkdir pip-modules
               pip install -r requirements.txt
