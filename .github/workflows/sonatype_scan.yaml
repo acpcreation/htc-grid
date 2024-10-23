@@ -50,14 +50,19 @@ jobs:
               cd $j
               
               # Remove dist dependencies
+              
+              sed -i "s,dist,,g" requirements.txt
+              sed -i "s,python,,g" requirements.txt
+              sed -i "s,/,,g" requirements.txt
+              sed -i "s,.,,g" requirements.txt
               for rem in ${removeDeps[@]}; do
-                  sed -i "s,./../../../../dist/python/$rem,,g" requirements.txt
+                  sed -i "s,$rem,,g" requirements.txt
                   # sed -i '' "s/$rem/ooo/g" requirements.txt
               done
               cat requirements.txt
               mkdir pip-modules
               pip install -r requirements.txt
-              pip freeze > pip-modules/requirements.txt
+              # pip freeze > pip-modules/requirements.txt
               pip download -r requirements.txt -d pip-modules
               cd $projRoot
           done
