@@ -52,10 +52,10 @@ jobs:
               # Remove dist dependencies
               sed -i "s,dist,,g" requirements.txt
               sed -i "s,python,,g" requirements.txt
-              sed -i "s,/,,g" requirements.txt
-              sed -i "s,.,,g" requirements.txt
+              # sed -i "s,/,,g" requirements.txt
+              # sed -i "s,.,,g" requirements.txt
               cat requirements.txt
-              echo""
+              echo ""
               for rem in ${removeDeps[@]}; do
                   sed -i "s,$rem,,g" requirements.txt
                   # sed -i '' "s/$rem/ooo/g" requirements.txt
