@@ -28,11 +28,16 @@ jobs:
 
       - name: Download Python Libraries
         run : |
-          mkdir pip-modules
-          pip install -r requirements.txt
-          pip freeze > pip-modules/requirements.txt
-          pip download -r requirements.txt -d pip-modules
-          ls pip-modules
+          list=$(find "." -name 'requirements.txt')
+          for i in $list; do
+              echo "Requirements at: $i"
+              j="${i/'requirements.txt'/}" # Remove 'requirements.txt'
+              cd $j
+              mkdir pip-modules
+              pip install -r requirements.txt
+              pip freeze > pip-modules/requirements.txt
+              pip download -r requirements.txt -d pip-modules
+          done
           
 
       ###########################
