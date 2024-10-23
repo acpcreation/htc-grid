@@ -28,7 +28,7 @@ jobs:
 
       - name: Create "dist" (Workaround)
         run : |
-          list=("privateapi-1.0.0-py3-none-any.whl" "publicapi-1.0.0-py3-none-any.whl" "api-0.1-py3-none-any.whl" "utils-0.1-py3-none-any.whl")
+          removeDeps=("privateapi-1.0.0-py3-none-any.whl" "publicapi-1.0.0-py3-none-any.whl" "api-0.1-py3-none-any.whl" "utils-0.1-py3-none-any.whl")
           mkdir dist/
           mkdir dist/python/
           cd dist/python/
@@ -39,16 +39,27 @@ jobs:
       
       - name: Download Python Libraries
         run : |
+          removeDeps=("privateapi-1.0.0-py3-none-any.whl" "publicapi-1.0.0-py3-none-any.whl" "api-0.1-py3-none-any.whl" "utils-0.1-py3-none-any.whl")
+          projRoot=`pwd`
           list=$(find "." -name 'requirements.txt')
+          
           for i in $list; do
               echo ""
               echo "Requirements at: $i"
               j="${i/'requirements.txt'/}" # Remove 'requirements.txt'
               cd $j
+              
+              # Remove dist dependencies
+              for rem in ${removeDeps[@]}; do
+                  sed -i "s,./../../../../dist/python/$rem,,g" requirements.txt
+                  # sed -i '' "s/$rem/ooo/g" requirements.txt
+              done
+              cat requirements.txt
               mkdir pip-modules
               pip install -r requirements.txt
               pip freeze > pip-modules/requirements.txt
               pip download -r requirements.txt -d pip-modules
+              cd $projRoot
           done
           
 
