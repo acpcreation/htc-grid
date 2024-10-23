@@ -39,7 +39,6 @@ jobs:
       
       - name: Download Python Libraries
         run : |
-          removeDeps=("privateapi-1.0.0-py3-none-any.whl" "publicapi-1.0.0-py3-none-any.whl" "api-0.1-py3-none-any.whl" "utils-0.1-py3-none-any.whl")
           projRoot=`pwd`
           list=$(find "." -name 'requirements.txt')
           
@@ -48,20 +47,9 @@ jobs:
               echo "Requirements at: $i"
               j="${i/'requirements.txt'/}" # Remove 'requirements.txt'
               cd $j
-              
-              # Remove dist dependencies
-              # sed -i "s,dist,,g" requirements.txt
-              # sed -i "s,python,,g" requirements.txt
-              # sed -i "s,/,,g" requirements.txt
-              # sed -i "s,.,,g" requirements.txt
-              # cat requirements.txt
-              # echo ""
-              # for rem in ${removeDeps[@]}; do
-              #     sed -i '/$rem/d' requirements.txt
-                  # sed -i "s,$rem,,g" requirements.txt
-                  # sed -i '' "s/$rem/ooo/g" requirements.txt
-              # done
+          
               sed -i '/dist/d' requirements.txt
+              sed -i '/backports.zoneinfo/d' requirements.txt
               cat requirements.txt
               mkdir pip-modules
               pip install -r requirements.txt
