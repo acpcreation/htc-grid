@@ -28,11 +28,11 @@ jobs:
 
       - name: Create "dist" (Workaround)
         run : |
-          list=("privateapi-1.0.0-py3-none-any.whl" "publicapi-1.0.0-py3-none-any.whl" "api-0.1-py3-none-any.whl" "utils-0.1-py3-none-any.whl" "privateapi-1.0.0-py3-none-any.whl")
+          list=("privateapi-1.0.0-py3-none-any.whl" "publicapi-1.0.0-py3-none-any.whl" "api-0.1-py3-none-any.whl" "utils-0.1-py3-none-any.whl")
           mkdir dist/
           mkdir dist/python/
           cd dist/python/
-          for i in $list; do
+          for i in ${list[@]}; do
             echo "Temporary File" > $i
           done
           ls
@@ -41,6 +41,7 @@ jobs:
         run : |
           list=$(find "." -name 'requirements.txt')
           for i in $list; do
+              echo ""
               echo "Requirements at: $i"
               j="${i/'requirements.txt'/}" # Remove 'requirements.txt'
               cd $j
