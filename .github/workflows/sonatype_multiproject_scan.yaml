@@ -1,0 +1,143 @@
+# Copyright 2023 Amazon.com, Inc. or its affiliates. 
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0 https://aws.amazon.com/apache-2-0/
+
+name: Sonatype SCA Scanning
+on:
+  workflow_dispatch:
+  push:
+  pull_request_target: 
+permissions:
+  contents: read
+  
+env:
+  SonatypeUrl: "https://finos.sonatype.app/platform/"
+  SonatypeAppId: "htc-grid"
+  SonatypeOrgId: "15ee0bf324c34c88ada6fd5cb7d26b55"
+  SonatypeScanTarget: "."
+  ExcludeDirectory: "**/docs/ **/.*"
+          
+jobs:
+  identify-projects:
+    name: Identify Projects 
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Project Matrix
+        id: set-matrix
+        run : |
+          list=$(find "." -name 'requirements.txt') # Find all requirements.txt files and make a list
+          UPDATE_TARGETS="" # Initialize variables
+          echo '{"projects":[]}' > targets.json # Create object for matrix
+          for i in $list; do
+              loc="${i/\/requirements.txt/}" # Remove '/requirements.txt' from path
+              loc="${loc/'./'/}" # Remove './' from path
+              
+              projName="${loc//\//-}" # Replace / with - to create app name
+              projName="${projName/source-compute_plane-python-/}" 
+              projName="${projName/source-client-python-/}" 
+              projName="${projName/source-control_plane-python-lambda-/}" 
+
+              if [ "$projName" = "." ]; then # If root directory, change app name and scan target
+                projName="main"
+                # loc="pip-modules"
+              fi
+              echo "PROJECT: $projName"
+              
+              item=$(jq -n --arg loc "$loc" --arg project "$projName" '{loc: $loc, project: $project}') # Add new path object
+              UPDATE_TARGETS=$(jq --argjson new_item "$item" '.projects += [$new_item]' targets.json) # Append the new target
+              echo "$UPDATE_TARGETS" > targets.json
+              echo "matrix=$(echo "$UPDATE_TARGETS" | jq -c .)" >> $GITHUB_ENV
+              echo "matrix=$(echo "$UPDATE_TARGETS" | jq -c .)" >> $GITHUB_OUTPUT
+          done
+          echo "Final Projects List:"
+          cat targets.json
+         
+      # - name: Debug Matrix Output
+      #   run: echo "${{ needs.generate-matrix.outputs.matrix }}"
+      
+  build-application:
+    name: Build and Scan
+    needs: identify-projects
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.identify-projects.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Process Each Item
+        run: echo "Processing ${{ matrix.projects.loc }}"
+        
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip' # caching pip dependencies
+          
+      - name: Install Python Dependencies
+        working-directory: ${{ matrix.projects.loc }} 
+        run : |
+          pwd
+          # Remove local dependencies
+          sed -i '/dist/d' requirements.txt 
+          sed -i '/backports.zoneinfo/d' requirements.txt
+          
+          # cat requirements.txt
+          # echo ""
+          mkdir pip-modules
+          # pip install -r requirements.txt
+          # pip freeze > pip-modules/requirements.txt
+          pip download -r requirements.txt -d pip-modules
+      
+      # - name: Create Python Matrix and Install Dependencies
+      #   run : |
+      #     projRoot=`pwd`
+      #     list=$(find "." -name 'requirements.txt')          
+      #     for i in $list; do
+      #         echo ""
+      #         echo "Found requirements.txt at: $i"
+      #         j="${i/'requirements.txt'/}" # Remove 'requirements.txt' from path
+      #         cd $j
+
+      #         # Remove local dependencies
+      #         sed -i '/dist/d' requirements.txt 
+      #         sed -i '/backports.zoneinfo/d' requirements.txt
+              
+      #         cat requirements.txt
+      #         echo ""
+      #         # mkdir pip-modules
+      #         # pip install -r requirements.txt
+      #         # pip freeze > pip-modules/requirements.txt
+      #         # pip download -r requirements.txt -d pip-modules
+      #         cd $projRoot # Return to project root
+      #     done
+      
+          
+      ###########################
+      ## Sonatype SCA Scanning ##
+      ###########################
+      - name: Sonatype Lifecycle SCA Scan
+        id: evaluate
+        uses: sonatype/actions/evaluate@v1
+        with:
+          iq-server-url: ${{ env.SonatypeUrl }}
+          username: ${{ secrets.SONATYPE_SCANNER_USERNAME }}
+          password: ${{ secrets.SONATYPE_SCANNER_PASSWORD }}
+          application-id: ${{ env.SonatypeAppId }}-${{ matrix.projects.project }} 
+          organization-id: ${{ env.SonatypeOrgId }}
+          stage: "build"
+          scan-targets: ${{ matrix.projects.loc }}/ 
+          module-exclude: ${{ env.ExcludeDirectory }}
+
+      # - name: Save Sonatype SBOM
+      #   uses: sonatype/actions/fetch-sbom@v1
+      #   if: ( success() || failure() ) && steps.evaluate.outputs.scan-id
+      #   with:
+      #     iq-server-url: ${{ env.SonatypeUrl }}
+      #     username: ${{ secrets.SONATYPE_SCANNER_USERNAME }}
+      #     password: ${{ secrets.SONATYPE_SCANNER_PASSWORD }}
+      #     application-id: ${{ env.SonatypeAppId }}
+      #     scan-id: ${{ steps.evaluate.outputs.scan-id }}
+      #     sbom-standard: spdx
+      #     sbom-version: 2.3
+      #     artifact-name: ${{ env.SonatypeAppId }}-bom
